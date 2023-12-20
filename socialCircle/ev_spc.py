@@ -1,8 +1,8 @@
 """
 @Author: Conghao Wong
 @Date: 2023-11-07 16:51:07
-@LastEditors: Conghao Wong
-@LastEditTime: 2023-12-20 15:30:03
+@LastEditors: Ziqian Zou
+@LastEditTime: 2023-12-20 16:29:53
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -66,13 +66,13 @@ class EVSPCModel(BaseSocialCircleModel):
 
         self.spc = CircleFusionLayer(self.sc)
 
-        self.ts = tslayer((self.args.obs_frames, self.sc.dim))
-        self.tse = layers.TrajEncoding(self.sc.dim,
-                                       self.d//2, torch.nn.ReLU,
+        self.ts = tslayer((self.args.obs_frames, self.sc.dim+self.pc.dim))
+        self.tse = layers.TrajEncoding(self.sc.dim+self.pc.dim,
+                                       self.d, torch.nn.ReLU,
                                        transform_layer=self.ts)
 
         # Concat and fuse SC
-        self.concat_fc = layers.Dense(self.d, self.d//2, torch.nn.Tanh)
+        self.concat_fc = layers.Dense(self.d+self.d//2, self.d//2, torch.nn.Tanh)
 
         # Shapes
         self.Tsteps_en, self.Tchannels_en = self.t1.Tshape
@@ -157,7 +157,7 @@ class EVSPCModel(BaseSocialCircleModel):
         sp_circle = self.spc(social_circle, physical_circle)
 
         # Encode the final InteractionCircle
-        f_social = self.tse(sp_circle)      # (batch, steps, d/2)
+        f_social = self.tse(sp_circle)      # (batch, steps, d)
 
         # Trajectory embedding and encoding
         f = self.te(obs)

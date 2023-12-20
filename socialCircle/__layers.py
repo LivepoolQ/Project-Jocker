@@ -1,8 +1,8 @@
 """
 @Author: Conghao Wong
 @Date: 2023-08-08 14:55:56
-@LastEditors: Conghao Wong
-@LastEditTime: 2023-11-29 11:04:10
+@LastEditors: Ziqian Zou
+@LastEditTime: 2023-12-20 16:22:45
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -316,7 +316,7 @@ class CircleFusionLayer(torch.nn.Module):
         self.use_direction = sclayer.use_direction
 
     def forward(self, sc: torch.Tensor, pc: torch.Tensor, *args, **kwargs):
-
+        return torch.concat([sc, pc], dim=-1)
         index = -1
         spc = []
         if self.use_velocity:
