@@ -2,7 +2,7 @@
 @Author: Conghao Wong
 @Date: 2023-08-15 20:30:51
 @LastEditors: Conghao Wong
-@LastEditTime: 2024-05-30 13:51:44
+@LastEditTime: 2024-07-22 20:16:50
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -41,7 +41,14 @@ class TransformerSCModel(Model, BaseSocialCircleModel):
         self.sc_args = self.args.register_subargs(SocialCircleArgs, 'sc')
 
         # Preprocess
-        self.set_preprocess(**{PROCESS_TYPES.MOVE: 0})
+        preprocess = []
+        for index, operation in enumerate(["NONE",
+                                           PROCESS_TYPES.SCALE,
+                                           PROCESS_TYPES.ROTATE]):
+            if self.args.preprocess[index] == '1':
+                preprocess.append(operation)
+
+        self.set_preprocess(*preprocess, **{PROCESS_TYPES.MOVE: 0})
 
         # Assign model inputs
         self.set_inputs(INPUT_TYPES.OBSERVED_TRAJ,
