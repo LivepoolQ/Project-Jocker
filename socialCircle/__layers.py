@@ -2,7 +2,7 @@
 @Author: Conghao Wong
 @Date: 2023-08-08 14:55:56
 @LastEditors: Conghao Wong
-@LastEditTime: 2024-05-30 13:49:26
+@LastEditTime: 2024-09-09 19:25:48
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -15,7 +15,7 @@ from qpid.constant import INPUT_TYPES
 from qpid.model import Model, layers, process
 from qpid.utils import get_mask
 
-from .__args import PhysicalCircleArgs
+from .__args import PhysicalCircleArgs, SocialCircleArgs
 
 NORMALIZED_SIZE = None
 
@@ -176,6 +176,12 @@ class SocialCircleLayer(torch.nn.Module):
 
         # Compute and encode the SocialCircle
         social_circle = self(c_obs, c_nei)
+
+        # Set all partitions to zeros (counterfactual variations)
+        sc_args = model.args.register_subargs(SocialCircleArgs, 'sc')
+        if sc_args.use_empty_neighbors:
+            return torch.zeros_like(social_circle)
+
         return social_circle
 
     def pad(self, input: torch.Tensor):
@@ -383,6 +389,7 @@ class PhysicalCircleLayer(torch.nn.Module):
             inputs, segMaps.INPUT_TYPES.SEG_MAP_PARAS)
 
         # Process model inputs
+        # Set all maps to zeros (counterfactual variations)
         pc_args = model.args.register_subargs(PhysicalCircleArgs, 'pc')
         if pc_args.use_empty_seg_maps:
             seg_maps = torch.zeros_like(seg_maps)

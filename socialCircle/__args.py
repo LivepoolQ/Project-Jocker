@@ -2,7 +2,7 @@
 @Author: Conghao Wong
 @Date: 2023-08-08 15:19:56
 @LastEditors: Conghao Wong
-@LastEditTime: 2024-05-28 10:26:23
+@LastEditTime: 2024-09-09 19:55:30
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -78,6 +78,17 @@ class SocialCircleArgs(EmptyArgs):
             self.log(f'The number of partitions should be set properly. ' +
                      f'Received `{p}`.',
                      level='error', raiseError=ValueError)
+
+    @property
+    def use_empty_neighbors(self) -> int:
+        """
+        Choose whether to use zero neighbors when computing the
+        SocialCircle meta components. The empty neighbors indicate that There
+        will be no neighbors to calculate SocialCircle meta components, i.e.,
+        leading to a all-zero circle.
+        This arg is only used when running ablation studies.
+        """
+        return self._arg('use_empty_neighbors', 0, argtype=TEMPORARY)
 
 
 class PhysicalCircleArgs(EmptyArgs):
