@@ -2,7 +2,7 @@
 @Author: Conghao Wong
 @Date: 2024-03-20 16:52:02
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-14 21:52:42
+@LastEditTime: 2024-10-15 17:58:03
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2024 Conghao Wong, All Rights Reserved.
@@ -56,13 +56,12 @@ class EVSCModel(Model, BaseSocialCircleModel):
                                     use_direction=self.sc_args.use_direction,
                                     relative_velocity=self.sc_args.rel_speed,
                                     use_move_direction=self.sc_args.use_move_direction,
-                                    use_acceleration=self.sc_args.use_acc)
-        self.ts = tslayer((self.args.obs_frames, self.sc.dim))
-        self.tse = layers.TrajEncoding(self.sc.dim, self.d//2, torch.nn.ReLU,
-                                       transform_layer=self.ts)
+                                    use_acceleration=self.sc_args.use_acc,
+                                    output_units=self.d)
 
         # Concat and fuse SC
-        self.concat_fc = layers.Dense(self.d, self.d//2, torch.nn.Tanh)
+        self.concat_fc = layers.Dense(
+            self.d + self.d//2, self.d//2, torch.nn.Tanh)
 
         # Shapes
         self.Tsteps_en, self.Tchannels_en = self.t1.Tshape
@@ -109,8 +108,7 @@ class EVSCModel(Model, BaseSocialCircleModel):
         obs = self.get_input(inputs, INPUT_TYPES.OBSERVED_TRAJ)
 
         # Compute SocialCircle
-        social_circle = self.sc.implement(self, inputs)
-        f_social = self.tse(social_circle)    # (batch, steps, d/2)
+        f_social = self.sc.implement(self, inputs)  # (batch, steps, d)
 
         # Trajectory embedding and encoding
         f = self.te(obs)
@@ -160,7 +158,7 @@ class EVSCModel(Model, BaseSocialCircleModel):
             all_predictions.append(y)
 
         Y = torch.concat(all_predictions, dim=-3)   # (batch, K, n_key, dim)
-        return Y, social_circle
+        return Y
 
 
 class EVSCStructure(Structure):
