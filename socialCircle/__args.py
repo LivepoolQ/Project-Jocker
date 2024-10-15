@@ -1,8 +1,8 @@
 """
 @Author: Conghao Wong
 @Date: 2023-08-08 15:19:56
-@LastEditors: Conghao Wong
-@LastEditTime: 2024-09-09 19:55:30
+@LastEditors: Ziqian Zou
+@LastEditTime: 2024-10-14 21:39:23
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -12,6 +12,14 @@ from qpid.args import DYNAMIC, STATIC, TEMPORARY, EmptyArgs
 
 
 class SocialCircleArgs(EmptyArgs):
+
+    @property
+    def use_acc(self) -> int:
+        """
+        Choose whether to use acceleration 
+        value as the acceleration factor in MODEL.
+        """
+        return self._arg('use_acc', 0, argtype=STATIC, desc_in_model_summary='use_acc_factor')
 
     @property
     def rel_speed(self) -> int:

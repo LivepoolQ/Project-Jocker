@@ -1,8 +1,8 @@
 """
 @Author: Conghao Wong
 @Date: 2024-03-20 16:52:02
-@LastEditors: Conghao Wong
-@LastEditTime: 2024-05-30 13:38:22
+@LastEditors: Ziqian Zou
+@LastEditTime: 2024-10-14 21:52:42
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2024 Conghao Wong, All Rights Reserved.
@@ -55,7 +55,8 @@ class EVSCModel(Model, BaseSocialCircleModel):
                                     use_distance=self.sc_args.use_distance,
                                     use_direction=self.sc_args.use_direction,
                                     relative_velocity=self.sc_args.rel_speed,
-                                    use_move_direction=self.sc_args.use_move_direction)
+                                    use_move_direction=self.sc_args.use_move_direction,
+                                    use_acceleration=self.sc_args.use_acc)
         self.ts = tslayer((self.args.obs_frames, self.sc.dim))
         self.tse = layers.TrajEncoding(self.sc.dim, self.d//2, torch.nn.ReLU,
                                        transform_layer=self.ts)
