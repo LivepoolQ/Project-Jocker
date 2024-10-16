@@ -2,7 +2,7 @@
 @Author: Conghao Wong
 @Date: 2023-08-08 14:55:56
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-15 17:57:50
+@LastEditTime: 2024-10-16 15:41:32
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -101,6 +101,17 @@ class SocialCircleLayer(torch.nn.Module):
         obs_vector_last = trajs[..., -1:, :] - trajs[..., -2:-1, :]
         obs_vector_second_last = trajs[..., -2:-1, :] - trajs[..., -3:-2, :]
 
+        t_half = trajs.shape[-2] // 2
+        # calculate vector of right half and left half of neighbor trajectories
+        nei_vector_right = nei_trajs[..., -1, :] - nei_trajs[..., t_half, :]
+        nei_vector_left = nei_trajs[..., t_half - 1, :] - nei_trajs[..., 0, :]
+        _nei_acc = nei_vector_right - nei_vector_left
+
+        # calculate vector of right half and left half of ego trajectories
+        obs_vector_right = trajs[..., -1, :] - trajs[..., t_half, :]
+        obs_vector_left = trajs[..., t_half - 1, :] - trajs[..., 0, :]
+        _obs_acc = obs_vector_right - obs_vector_left
+
         # Velocity factor
         if self.use_velocity:
             # Calculate velocities
@@ -134,11 +145,11 @@ class SocialCircleLayer(torch.nn.Module):
         # acceleration factor
         if self.use_acceleration:
             # calculate the velocity change from the 2nd last step to the last step
-            nei_acc_vector = nei_vector_last - nei_vector_second_last
-            obs_acc_vector = obs_vector_last - obs_vector_second_last
-            nei_acc = torch.norm(nei_acc_vector, dim=-1)    # (batch, n)
-            obs_acc = torch.norm(obs_acc_vector, dim=-1)    # (batch, 1)
-            f_acceleration = nei_acc
+            # nei_acc_vector = nei_vector_last - nei_vector_second_last
+            # obs_acc_vector = obs_vector_last - obs_vector_second_last
+            nei_acc = torch.norm(_nei_acc, dim=-1)    # (batch, n)
+            # obs_acc = torch.norm(_obs_acc, dim=-1)    # (batch, 1)
+            f_acceleration = nei_acc * trajs.shape[-2] * (nei_velocity ** 2)
 
         # Angles (the independent variable \theta)
         angle_indices = f_direction / (2*np.pi/self.partitions)
