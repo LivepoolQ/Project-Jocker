@@ -1,8 +1,8 @@
 """
 @Author: Conghao Wong
 @Date: 2022-06-20 15:28:14
-@LastEditors: Conghao Wong
-@LastEditTime: 2024-05-30 11:14:08
+@LastEditors: Ziqian Zou
+@LastEditTime: 2024-10-21 19:59:03
 @Description: file content
 @Github: https://github.com/cocoon2wong
 @Copyright 2022 Conghao Wong, All Rights Reserved.
@@ -35,6 +35,7 @@ def main(args: list[str], run_train_or_test=True):
 
 
 if __name__ == '__main__':
+    import groups
     import socialCircle
     torch.autograd.set_detect_anomaly(True)
     main(sys.argv)
