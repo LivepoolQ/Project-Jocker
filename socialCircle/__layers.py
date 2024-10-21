@@ -1,8 +1,8 @@
 """
 @Author: Conghao Wong
 @Date: 2023-08-08 14:55:56
-@LastEditors: Conghao Wong
-@LastEditTime: 2024-09-09 19:25:48
+@LastEditors: Ziqian Zou
+@LastEditTime: 2024-10-21 20:00:56
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -83,6 +83,13 @@ class SocialCircleLayer(torch.nn.Module):
 
     def forward(self, trajs, nei_trajs, *args, **kwargs):
         # Move vectors -> (batch, ..., 2)
+        # Long term distance between neighbors and obs
+        long_term_dis = nei_trajs - trajs[:, None, ...]
+        group_mask = (torch.sum(long_term_dis ** 2,
+                      dim=[-1, -2]) < 10).to(dtype=torch.int32)
+        trajs_group = nei_trajs * group_mask[..., None, None]
+        nei_trajs = nei_trajs * (1 - group_mask[..., None, None])
+
         # `nei_trajs` are relative values to target agents' last obs step
         obs_vector = trajs[..., -1:, :] - trajs[..., 0:1, :]
         nei_vector = nei_trajs[..., -1, :] - nei_trajs[..., 0, :]
