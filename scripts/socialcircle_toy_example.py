@@ -1,8 +1,8 @@
 """
 @Author: Conghao Wong
 @Date: 2023-07-12 17:38:42
-@LastEditors: Conghao Wong
-@LastEditTime: 2024-07-01 10:46:36
+@LastEditors: Ziqian Zou
+@LastEditTime: 2024-10-22 21:51:45
 @Description: file content
 @Github: https://cocoon2wong.github.io
 @Copyright 2023 Conghao Wong, All Rights Reserved.
@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.abspath('.'))
 
 import qpid
 import socialCircle
+import groups
 from main import main
 from qpid.args import TEMPORARY, EmptyArgs
 from qpid.constant import DATASET_CONFIGS, INPUT_TYPES
