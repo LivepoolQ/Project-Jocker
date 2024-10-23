@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 16:58:13
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-21 19:59:46
+@LastEditTime: 2024-10-23 16:16:01
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -88,8 +88,9 @@ class GroupModel(qpid.model.Model):
         # Long term distance between neighbors and obs
         long_term_dis = c_nei - c_obs[:, None, ...]
         group_mask = (torch.sum(long_term_dis ** 2,
-                      dim=[-1, -2]) < 10).to(dtype=torch.int32)
-        trajs_group = c_nei * group_mask[..., None, None]
+                      dim=[-1, -2]) < 8).to(dtype=torch.int32)
+        trajs_group = (
+            nei * group_mask[..., None, None]).to(dtype=torch.float32)
         group_num = torch.sum(group_mask, dim=-1)
 
         # Compute SocialCircle
@@ -101,8 +102,7 @@ class GroupModel(qpid.model.Model):
 
         # group trajectory encoding
         f_group = self.te(trajs_group)
-        f_group = (torch.sum(f_group, dim=1) + 1e-5) / \
-            (group_num[:, None, None] + 1e-5)
+        f_group = torch.sum(f_group, dim=1) / (group_num[..., None, None] + 1)
 
         # Concat obs and nei feature
         f = torch.concat([f_obs, f_group], dim=-1)
