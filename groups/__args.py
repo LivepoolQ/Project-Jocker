@@ -2,11 +2,13 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 17:03:36
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-19 16:29:16
+@LastEditTime: 2024-10-29 20:27:03
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
 """
+import numpy as np
+
 from qpid.args import DYNAMIC, STATIC, TEMPORARY, EmptyArgs
 
 
@@ -20,8 +22,59 @@ class GroupModelArgs(EmptyArgs):
         return self._arg('use_group', 1, argtype=STATIC, desc_in_model_summary='use_group_model')
 
     @property
+    def view_angle(self) -> float:
+        """
+        Value of conception view field.
+        """
+        return self._arg('view_angle', np.pi, argtype=STATIC)
+
+    @property
+    def use_view_angle(self) -> int:
+        """
+        Choose whether to use view angle in calculating conception.
+        """
+        return self._arg('use_view_angle', 1, argtype=STATIC)
+
+    @property
+    def use_pooling(self) -> int:
+        """
+        Choose whether to use pooling in calculating conception value.
+        Only choose one between pooling and max.
+        """
+        return self._arg('use_pooling', 1, argtype=STATIC)
+
+    @property
+    def use_max(self) -> int:
+        """
+        Choose whether to use max in calculating conception value.
+        Only choose one between pooling and max.
+        """
+        return self._arg('use_pooling', 0, argtype=STATIC)
+
+    @property
     def output_units(self) -> int:
         """
         Set number of the output units of trajectory encoding.
         """
         return self._arg('output_units', 32, argtype=STATIC)
+
+    @property
+    def use_velocity(self) -> int:
+        """
+        Choose whether to use the velocity factor in the conception.
+        """
+        return self._arg('use_velocity', 1, argtype=STATIC)
+
+    @property
+    def use_distance(self) -> int:
+        """
+        Choose whether to use the distance factor in the conception.
+        """
+        return self._arg('use_distance', 1, argtype=STATIC)
+
+    @property
+    def use_move_dir(self) -> int:
+        """
+        Choose whether to use the move direction factor in the conception.
+        """
+        return self._arg('use_move_dir', 1, argtype=STATIC)

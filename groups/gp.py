@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 16:58:13
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-23 16:16:01
+@LastEditTime: 2024-10-29 20:27:19
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -12,11 +12,11 @@ import torch
 
 import qpid
 from qpid.constant import INPUT_TYPES
-from socialCircle import SocialCircleArgs
-from socialCircle.__layers import SocialCircleLayer
+from qpid.model.layers import LinearLayerND
 
 from .__args import GroupModelArgs
 from .__traj_encoding import TrajEncoding
+from .conception import ConceptionLayer
 
 nn = torch.nn
 
@@ -31,7 +31,6 @@ class GroupModel(qpid.model.Model):
 
         # Init args
         self.gp_args = self.args.register_subargs(GroupModelArgs, 'gp_args')
-        self.sc_args = self.args.register_subargs(SocialCircleArgs, 'sc')
 
         # Set model inputs
         self.set_inputs(INPUT_TYPES.OBSERVED_TRAJ, INPUT_TYPES.NEIGHBOR_TRAJ)
@@ -42,17 +41,25 @@ class GroupModel(qpid.model.Model):
                                input_units=self.dim)
 
         # social_circle encoding
-        self.tse = TrajEncoding(
-            output_units=self.gp_args.output_units * 2, input_units=3)
+        self.tse = TrajEncoding(output_units=self.gp_args.output_units * self.dim,
+                                input_units=(self.gp_args.use_velocity + self.gp_args.use_move_dir + self.gp_args.use_distance))
 
-        # SocialCircle layer
-        self.sc = SocialCircleLayer(
-            partitions=self.args.obs_frames,
-            max_partitions=self.args.obs_frames,
-        )
+        # Conception layer
+        self.cl = ConceptionLayer(use_view_angle=self.gp_args.use_view_angle,
+                                  view_angle=self.gp_args.view_angle,
+                                  use_pooling=self.gp_args.use_pooling,
+                                  use_max=self.gp_args.use_max)
 
         # Noise encoding
         self.ie = TrajEncoding(self.d, self.d_id)
+
+        # Obs encoded as target of transformer
+        self.pe = TrajEncoding(self.args.pred_frames *
+                               self.dim, self.args.obs_frames * self.dim)
+
+        # Linear prediction of obs as the target of transformer
+        self.lp = LinearLayerND(
+            self.args.obs_frames, self.args.pred_frames, return_full_trajectory=False)
 
         # Backbone
         self.bb = qpid.model.transformer.Transformer(
@@ -63,17 +70,16 @@ class GroupModel(qpid.model.Model):
             input_vocab_size=self.dim,
             target_vocab_size=self.dim,
             pe_input=self.args.obs_frames,
-            pe_target=self.args.obs_frames,
+            pe_target=self.args.pred_frames + self.args.obs_frames,
             include_top=False
         )
 
         # Final layer
         self.fl = torch.nn.Sequential(
-            torch.nn.Linear(self.args.feature_dim *
-                            self.args.obs_frames, self.args.feature_dim * 2),
+            torch.nn.Linear(self.args.feature_dim * 2, self.args.feature_dim),
             torch.nn.ReLU(),
-            torch.nn.Linear(self.args.feature_dim * 2,
-                            self.args.pred_frames * 2),
+            torch.nn.Linear(self.args.feature_dim,
+                            self.dim),
             torch.nn.Tanh(),
         )
 
@@ -88,21 +94,24 @@ class GroupModel(qpid.model.Model):
         # Long term distance between neighbors and obs
         long_term_dis = c_nei - c_obs[:, None, ...]
         group_mask = (torch.sum(long_term_dis ** 2,
-                      dim=[-1, -2]) < 8).to(dtype=torch.int32)
+                      dim=[-1, -2]) < 6).to(dtype=torch.int32)
         trajs_group = (
             nei * group_mask[..., None, None]).to(dtype=torch.float32)
         group_num = torch.sum(group_mask, dim=-1)
 
-        # Compute SocialCircle
-        social_circle = self.sc.implement(self, inputs)
-        f_social = self.tse(social_circle)
+        # Compute Conception and padding
+        conception_circle = self.cl(obs, nei)
+        f_social = self.tse(conception_circle)
+        f_social = nn.functional.pad(
+            f_social, [0, 0, 0, self.args.obs_frames - self.cl.dim, 0, 0])
 
         # Obs trajectory encoding
         f_obs = self.te(obs)
 
         # group trajectory encoding
         f_group = self.te(trajs_group)
-        f_group = torch.sum(f_group, dim=1) / (group_num[..., None, None] + 1)
+        f_group = (torch.sum(f_group, dim=1) + 1) / \
+            (group_num[..., None, None] + 1)
 
         # Concat obs and nei feature
         f = torch.concat([f_obs, f_group], dim=-1)
@@ -114,21 +123,23 @@ class GroupModel(qpid.model.Model):
         all_predictions = []
         repeats = self.args.K_train if training else self.args.K
 
-        f_tran, _ = self.bb(inputs=f, targets=obs, training=training)
+        obs_lin = self.lp(obs)
+        obs_lin = torch.concat([obs, obs_lin], dim=-2)
+
+        f_tran, _ = self.bb(inputs=f, targets=obs_lin, training=training)
+        f_tran = f_tran[:, self.args.obs_frames:, ...]
 
         # Prediction
         for _ in range(repeats):
             # Assign random ids and embedding
             z = torch.normal(mean=0, std=1, size=list(
-                f.shape[:-1]) + [self.d_id])
+                f_tran.shape[:-1]) + [self.d_id])
             f_z = self.ie(z.to(obs.device))
 
-            f_final = f_tran + f_z
+            f_final = torch.concat([f_tran, f_z], dim=-1)
 
-            g = torch.flatten(f_final, start_dim=1, end_dim=-1)
-            g = self.fl(g)
-            traj_pred = g[:, None, ...].reshape(
-                f.shape[0], 1, self.args.pred_frames, -1)
+            g = self.fl(f_final)
+            traj_pred = g[:, None, ...]
 
             all_predictions.append(traj_pred)
 
