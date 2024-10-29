@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 16:58:13
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-29 21:28:46
+@LastEditTime: 2024-10-29 22:25:42
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -54,7 +54,8 @@ class GroupModel(qpid.model.Model):
                                   use_velocity=self.gp_args.use_velocity,
                                   use_distance=self.gp_args.use_distance,
                                   use_move_dir=self.gp_args.use_move_dir,
-                                  use_group=self.gp_args.use_group)
+                                  use_group=self.gp_args.use_group,
+                                  disable_conception=self.gp_args.disable_conception)
 
         # Noise encoding
         self.ie = TrajEncoding(self.d, self.d_id)

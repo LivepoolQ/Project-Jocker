@@ -22,6 +22,7 @@ class ConceptionLayer(torch.nn.Module):
                  use_distance: bool | int = True,
                  use_move_dir: bool | int = True,
                  use_group: bool | int = True,
+                 disable_conception: bool | int = False,
                  *args, **kwargs):
         """
         ## View Angle Settings
@@ -33,6 +34,7 @@ class ConceptionLayer(torch.nn.Module):
         :param use_distance: Choose whether to use the distance factor in the conception.
         :param use_move_dir: Choose whether to use the move direction factor in the conception.
         :param use_group: Choose whether to use pedestrian groups when calculating SocialCircle.
+        :param disable_conception: Choose whether to disable conception layer in the GroupModel.
         """
         super().__init__(*args, **kwargs)
         self.use_view_angle = use_view_angle
@@ -43,6 +45,7 @@ class ConceptionLayer(torch.nn.Module):
         self.use_distance = use_distance
         self.use_move_dir = use_move_dir
         self.use_group = use_group
+        self.diable_conception = disable_conception
 
     @property
     def dim(self) -> int:
@@ -163,7 +166,7 @@ class ConceptionLayer(torch.nn.Module):
     def implement(self, model: Model, inputs: list[torch.Tensor]):
         obs = model.get_input(inputs, INPUT_TYPES.OBSERVED_TRAJ)
         nei = model.get_input(inputs, INPUT_TYPES.NEIGHBOR_TRAJ)
-        if self.use_group:
+        if (self.use_group and (not self.diable_conception)):
             # Long term distance between neighbors and obs
             long_term_dis = nei - obs[:, None, ...]
             group_mask = (torch.sum(long_term_dis ** 2,
@@ -172,6 +175,12 @@ class ConceptionLayer(torch.nn.Module):
             nei_trajs = nei * \
                 (1 - group_mask[..., None, None]) + \
                 group_mask[..., None, None] * INF
+            con = self(obs, nei_trajs)
+
+            return con
+
+        elif (self.use_group and self.diable_conception):
+            nei_trajs = torch.ones_like(nei) * INF
             con = self(obs, nei_trajs)
 
             return con

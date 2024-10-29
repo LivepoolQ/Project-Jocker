@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 17:03:36
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-29 21:25:41
+@LastEditTime: 2024-10-29 22:25:25
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -78,3 +78,10 @@ class GroupModelArgs(EmptyArgs):
         Choose whether to use the move direction factor in the conception.
         """
         return self._arg('use_move_dir', 1, argtype=STATIC)
+
+    @property
+    def disable_conception(self) -> int:
+        """
+        Choose whether to disable conception layer in the GroupModel.
+        """
+        return self._arg('disable_conception', 0, argtype=STATIC)
