@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 16:58:13
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-29 20:27:19
+@LastEditTime: 2024-10-29 21:28:46
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -39,6 +39,8 @@ class GroupModel(qpid.model.Model):
         # Trajectory encoding
         self.te = TrajEncoding(output_units=self.gp_args.output_units,
                                input_units=self.dim)
+        self.te2 = TrajEncoding(output_units=self.gp_args.output_units * 2,
+                                input_units=self.dim)
 
         # social_circle encoding
         self.tse = TrajEncoding(output_units=self.gp_args.output_units * self.dim,
@@ -48,7 +50,11 @@ class GroupModel(qpid.model.Model):
         self.cl = ConceptionLayer(use_view_angle=self.gp_args.use_view_angle,
                                   view_angle=self.gp_args.view_angle,
                                   use_pooling=self.gp_args.use_pooling,
-                                  use_max=self.gp_args.use_max)
+                                  use_max=self.gp_args.use_max,
+                                  use_velocity=self.gp_args.use_velocity,
+                                  use_distance=self.gp_args.use_distance,
+                                  use_move_dir=self.gp_args.use_move_dir,
+                                  use_group=self.gp_args.use_group)
 
         # Noise encoding
         self.ie = TrajEncoding(self.d, self.d_id)
@@ -91,30 +97,36 @@ class GroupModel(qpid.model.Model):
         c_obs = self.picker.get_center(obs)[..., :2]
         c_nei = self.picker.get_center(nei)[..., :2]
 
-        # Long term distance between neighbors and obs
-        long_term_dis = c_nei - c_obs[:, None, ...]
-        group_mask = (torch.sum(long_term_dis ** 2,
-                      dim=[-1, -2]) < 6).to(dtype=torch.int32)
-        trajs_group = (
-            nei * group_mask[..., None, None]).to(dtype=torch.float32)
-        group_num = torch.sum(group_mask, dim=-1)
+        if self.gp_args.use_group:
+            # Long term distance between neighbors and obs
+            long_term_dis = c_nei - c_obs[:, None, ...]
+            group_mask = (torch.sum(long_term_dis ** 2,
+                                    dim=[-1, -2]) < 6).to(dtype=torch.int32)
+            trajs_group = (
+                nei * group_mask[..., None, None]).to(dtype=torch.float32)
+            group_num = torch.sum(group_mask, dim=-1)
 
         # Compute Conception and padding
-        conception_circle = self.cl(obs, nei)
+        conception_circle = self.cl.implement(self, inputs)
         f_social = self.tse(conception_circle)
         f_social = nn.functional.pad(
             f_social, [0, 0, 0, self.args.obs_frames - self.cl.dim, 0, 0])
 
-        # Obs trajectory encoding
-        f_obs = self.te(obs)
-
         # group trajectory encoding
-        f_group = self.te(trajs_group)
-        f_group = (torch.sum(f_group, dim=1) + 1) / \
-            (group_num[..., None, None] + 1)
+        if self.gp_args.use_group:
+
+         # Obs trajectory encoding
+            f_obs = self.te(obs)
+            f_group = self.te(trajs_group)
+            f_group = (torch.sum(f_group, dim=1) + 1) / \
+                (group_num[..., None, None] + 1)
 
         # Concat obs and nei feature
-        f = torch.concat([f_obs, f_group], dim=-1)
+            f = torch.concat([f_obs, f_group], dim=-1)
+
+        else:
+            f_obs = self.te2(obs)
+            f = f_obs
 
         # Concat feature of sc and traj
         f = torch.concat([f_social, f], dim=-1)

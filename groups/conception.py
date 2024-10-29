@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 
+from qpid.constant import INPUT_TYPES
+from qpid.model import Model
+
 INF = 100000000
 MU = 0.00001
 
@@ -15,6 +18,10 @@ class ConceptionLayer(torch.nn.Module):
                  view_angle: float = np.pi,
                  use_pooling: bool | int = True,
                  use_max: bool | int = False,
+                 use_velocity: bool | int = True,
+                 use_distance: bool | int = True,
+                 use_move_dir: bool | int = True,
+                 use_group: bool | int = True,
                  *args, **kwargs):
         """
         ## View Angle Settings
@@ -22,30 +29,29 @@ class ConceptionLayer(torch.nn.Module):
         :param view_angle: View angle of the target agent.
         :param use_pooling: Choose whether to use pooling in calculating conception value. Only choose one between pooling and max.
         :param use_max: Choose whether to use max in calculating conception value. Only choose one between pooling and max.
+        :param use_velocity: Choose whether to use the velocity factor in the conception.
+        :param use_distance: Choose whether to use the distance factor in the conception.
+        :param use_move_dir: Choose whether to use the move direction factor in the conception.
+        :param use_group: Choose whether to use pedestrian groups when calculating SocialCircle.
         """
         super().__init__(*args, **kwargs)
         self.use_view_angle = use_view_angle
         self.view_angle = view_angle
         self.use_pooling = use_pooling
         self.use_max = use_max
+        self.use_velocity = use_velocity
+        self.use_distance = use_distance
+        self.use_move_dir = use_move_dir
+        self.use_group = use_group
 
     @property
     def dim(self) -> int:
         """
         The number of conception layer factors.
         """
-        return 3
+        return (self.use_velocity + self.use_distance + self.use_move_dir)
 
     def forward(self, trajs, nei_trajs, *args, **kwargs):
-        # Long term distance between neighbors and obs
-        long_term_dis = nei_trajs - trajs[:, None, ...]
-        group_mask = (torch.sum(long_term_dis ** 2,
-                      dim=[-1, -2]) < 6).to(dtype=torch.int32)
-        trajs_group = nei_trajs * group_mask[..., None, None]
-        nei_trajs = nei_trajs * \
-            (1 - group_mask[..., None, None]) + \
-            group_mask[..., None, None] * INF
-
         # `nei_trajs` are relative values to target agents' last obs step
         obs_vector = trajs[..., -1:, :] - trajs[..., 0:1, :]
         nei_vector = nei_trajs[..., -1, :] - nei_trajs[..., 0, :]
@@ -62,8 +68,8 @@ class ConceptionLayer(torch.nn.Module):
         nei_dir = nei_dir % (2*np.pi)
 
         # mask neighbors
-        nei_mask = ((torch.sum(nei_trajs, dim=[-1, -2]) < (0.05 * INF)).to(dtype=torch.int32)) * (
-            (torch.sum(nei_trajs, dim=[-1, -2]) != 0).to(dtype=torch.int32))
+        nei_mask = (
+            torch.sum(nei_trajs, dim=[-1, -2]) < (0.05 * INF)).to(dtype=torch.int32)
 
         # mask view angle
         view_mask = (torch.abs(nei_dir - obs_dir) <
@@ -151,5 +157,26 @@ class ConceptionLayer(torch.nn.Module):
 
             # add right and left
             con = torch.concat([con_right, con_left, con_back], dim=-2)
+
+            return con
+
+    def implement(self, model: Model, inputs: list[torch.Tensor]):
+        obs = model.get_input(inputs, INPUT_TYPES.OBSERVED_TRAJ)
+        nei = model.get_input(inputs, INPUT_TYPES.NEIGHBOR_TRAJ)
+        if self.use_group:
+            # Long term distance between neighbors and obs
+            long_term_dis = nei - obs[:, None, ...]
+            group_mask = (torch.sum(long_term_dis ** 2,
+                                    dim=[-1, -2]) < 6).to(dtype=torch.int32)
+            trajs_group = nei * group_mask[..., None, None]
+            nei_trajs = nei * \
+                (1 - group_mask[..., None, None]) + \
+                group_mask[..., None, None] * INF
+            con = self(obs, nei_trajs)
+
+            return con
+
+        else:
+            con = self(obs, nei)
 
             return con

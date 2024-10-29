@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 17:03:36
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-29 20:27:03
+@LastEditTime: 2024-10-29 21:25:41
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -49,7 +49,7 @@ class GroupModelArgs(EmptyArgs):
         Choose whether to use max in calculating conception value.
         Only choose one between pooling and max.
         """
-        return self._arg('use_pooling', 0, argtype=STATIC)
+        return self._arg('use_max', 0, argtype=STATIC)
 
     @property
     def output_units(self) -> int:
