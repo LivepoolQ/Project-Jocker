@@ -168,9 +168,10 @@ class ConceptionLayer(torch.nn.Module):
         nei = model.get_input(inputs, INPUT_TYPES.NEIGHBOR_TRAJ)
         if (self.use_group and (not self.diable_conception)):
             # Long term distance between neighbors and obs
-            long_term_dis = nei - obs[:, None, ...]
-            group_mask = (torch.sum(long_term_dis ** 2,
-                                    dim=[-1, -2]) < 6).to(dtype=torch.int32)
+            long_term_dis = nei - obs[:, None, ...]# final step distance(fde)
+            final_vec = nei[..., -1:, :] - obs[:, None, -1:, :]
+            group_mask = ((torch.sum(long_term_dis ** 2,
+                                    dim=[-1, -2]) < 6).to(dtype=torch.int32)) * ((torch.sum(final_vec ** 2, dim=[-1, -2]) < 6/8).to(dtype=torch.int32))
             trajs_group = nei * group_mask[..., None, None]
             nei_trajs = nei * \
                 (1 - group_mask[..., None, None]) + \

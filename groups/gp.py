@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 16:58:13
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-29 22:25:42
+@LastEditTime: 2024-11-04 11:24:50
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -99,10 +99,12 @@ class GroupModel(qpid.model.Model):
         c_nei = self.picker.get_center(nei)[..., :2]
 
         if self.gp_args.use_group:
-            # Long term distance between neighbors and obs
+            # Long term distance between neighbors and obs(ade)
             long_term_dis = c_nei - c_obs[:, None, ...]
-            group_mask = (torch.sum(long_term_dis ** 2,
-                                    dim=[-1, -2]) < 6).to(dtype=torch.int32)
+            # final step distance(fde)
+            final_vec = c_nei[..., -1:, :] - c_obs[:, None, -1:, :]
+            group_mask = ((torch.sum(long_term_dis ** 2,
+                                    dim=[-1, -2]) < 6).to(dtype=torch.int32)) * ((torch.sum(final_vec ** 2, dim=[-1, -2]) < 6/self.args.obs_frames).to(dtype=torch.int32))
             trajs_group = (
                 nei * group_mask[..., None, None]).to(dtype=torch.float32)
             group_num = torch.sum(group_mask, dim=-1)
