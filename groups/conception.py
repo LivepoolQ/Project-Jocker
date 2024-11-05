@@ -130,11 +130,12 @@ class ConceptionLayer(torch.nn.Module):
             # calculate conception in the back
             dis_back = (torch.sum(dis * nei_back,
                         dim=[-1, -2])) / (torch.sum(nei_back, dim=-1) + MU)
-            con_back = torch.concat([dis_back[:, None, None] / self.dim, dis_back[:,
-                                    None, None] / self.dim, dis_back[:, None, None] / self.dim], dim=-1)
+            con_back = torch.concat([dis_back[:, None, None]], dim=-1) 
+            # / self.dim, dis_back[:,
+            #                         None, None] / self.dim, dis_back[:, None, None] / self.dim], dim=-1)
 
             # add right and left
-            con = torch.concat([con_right, con_left, con_back], dim=-2)
+            con = torch.concat([con_right, con_left, con_back], dim=-1)
 
             return con
 
