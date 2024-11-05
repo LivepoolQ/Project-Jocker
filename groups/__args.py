@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 17:03:36
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-10-29 22:25:25
+@LastEditTime: 2024-11-04 21:08:54
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -85,3 +85,10 @@ class GroupModelArgs(EmptyArgs):
         Choose whether to disable conception layer in the GroupModel.
         """
         return self._arg('disable_conception', 0, argtype=STATIC)
+
+    @property
+    def generation_num(self) -> int:
+        """
+        Number of multi-style generation.
+        """
+        return self._arg('generation_num', 20, argtype=STATIC)
