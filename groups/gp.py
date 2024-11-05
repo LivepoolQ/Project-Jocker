@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 16:58:13
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-11-04 11:24:50
+@LastEditTime: 2024-11-04 20:53:48
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -43,8 +43,8 @@ class GroupModel(qpid.model.Model):
                                 input_units=self.dim)
 
         # social_circle encoding
-        self.tse = TrajEncoding(output_units=self.gp_args.output_units * self.dim,
-                                input_units=(self.gp_args.use_velocity + self.gp_args.use_move_dir + self.gp_args.use_distance))
+        self.tse = TrajEncoding(output_units=self.gp_args.output_units * 2,
+                                input_units=7)
 
         # Conception layer
         self.cl = ConceptionLayer(use_view_angle=self.gp_args.use_view_angle,
@@ -109,27 +109,27 @@ class GroupModel(qpid.model.Model):
                 nei * group_mask[..., None, None]).to(dtype=torch.float32)
             group_num = torch.sum(group_mask, dim=-1)
 
-        # Compute Conception and padding
-        conception_circle = self.cl.implement(self, inputs)
-        f_social = self.tse(conception_circle)
-        f_social = nn.functional.pad(
-            f_social, [0, 0, 0, self.args.obs_frames - self.cl.dim, 0, 0])
 
         # group trajectory encoding
         if self.gp_args.use_group:
 
-         # Obs trajectory encoding
+            # Obs trajectory encoding
             f_obs = self.te(obs)
             f_group = self.te(trajs_group)
             f_group = (torch.sum(f_group, dim=1) + 1) / \
                 (group_num[..., None, None] + 1)
 
-        # Concat obs and nei feature
+            # Concat obs and nei feature
             f = torch.concat([f_obs, f_group], dim=-1)
 
         else:
             f_obs = self.te2(obs)
             f = f_obs
+
+        # Compute Conception and padding
+        conception_circle = self.cl.implement(self, inputs)
+        f_social = self.tse(conception_circle)
+        f_social = torch.repeat_interleave(f_social, torch.tensor(f_obs.shape[-2]).to(f_obs.device).to(torch.int32), dim=-2)
 
         # Concat feature of sc and traj
         f = torch.concat([f_social, f], dim=-1)
