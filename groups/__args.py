@@ -2,7 +2,7 @@
 @Author: Ziqian Zou
 @Date: 2024-10-18 17:03:36
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-11-04 21:08:54
+@LastEditTime: 2024-11-05 21:30:13
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
@@ -92,3 +92,7 @@ class GroupModelArgs(EmptyArgs):
         Number of multi-style generation.
         """
         return self._arg('generation_num', 20, argtype=STATIC)
+    
+    @property
+    def no_social(self) -> int:
+        return self._arg('no_social', 0, argtype=TEMPORARY)

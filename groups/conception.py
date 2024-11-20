@@ -137,6 +137,21 @@ class ConceptionLayer(torch.nn.Module):
             # add right and left
             con = torch.concat([con_right, con_left, con_back], dim=-1)
 
+            # -----------------------
+            # The following lines are used to draw visualized figures in our paper
+            # from scripts.draw_fov import draw_fov
+
+            # start_angle = (obs_dir - (self.view_angle/2)) * (180/(np.pi))
+            # start_angle = start_angle[0].item()
+            # p = torch.concat([torch.sum(con_right, dim=-1), torch.sum(con_left, dim=-1), torch.sum(con_back, dim=-1)], dim=-1)
+
+            # draw_fov(con=p, file_name='conception_left_right', color_high=[0xff, 0xa6, 0x00],
+            #             color_low=[0x00, 0x3f, 0x5c],
+            #             max_width=0.3, min_width=0.2, view_angle=self.view_angle*(180/(np.pi)),
+            #             start_angle=start_angle)
+            # Vis codes end here
+            # -----------------------
+
             return con
 
         else:

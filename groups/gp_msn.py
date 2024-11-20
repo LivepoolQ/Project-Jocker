@@ -4,6 +4,7 @@ import qpid
 from qpid.constant import INPUT_TYPES
 from qpid.model import layers
 from qpid.model.layers import LinearLayerND
+from qpid.utils import INIT_POSITION
 
 from .__args import GroupModelArgs
 from .__traj_encoding import TrajEncoding
@@ -61,6 +62,10 @@ class GroupmsnModel(qpid.model.Model):
         self.lp = LinearLayerND(
             self.args.obs_frames, self.args.pred_frames, return_full_trajectory=False)
 
+        # Concat fc layer
+        self.concat_fc = layers.Dense(
+            self.gp_args.output_units * 4, self.gp_args.output_units * 4, activation=nn.Tanh)
+
         # Backbone
         self.bb = qpid.model.transformer.Transformer(
             num_layers=4,
@@ -98,7 +103,8 @@ class GroupmsnModel(qpid.model.Model):
     def forward(self, inputs, training=None, mask=None, *args, **kwargs):
         obs = self.get_input(inputs, INPUT_TYPES.OBSERVED_TRAJ)
         nei = self.get_input(inputs, INPUT_TYPES.NEIGHBOR_TRAJ)
-
+        # if self.gp_args.no_social and not training:
+        #     nei = self.create_empty_neighbors(obs)
         # SocialCircle will be computed on each agent's center point
         c_obs = self.picker.get_center(obs)[..., :2]
         c_nei = self.picker.get_center(nei)[..., :2]
@@ -109,7 +115,7 @@ class GroupmsnModel(qpid.model.Model):
             # final step distance(fde)
             final_vec = c_nei[..., -1:, :] - c_obs[:, None, -1:, :]
             group_mask = ((torch.sum(long_term_dis ** 2,
-                                     dim=[-1, -2]) < 6).to(dtype=torch.int32)) * ((torch.sum(final_vec ** 2, dim=[-1, -2]) < 6/self.args.obs_frames).to(dtype=torch.int32))
+                                     dim=[-1, -2]) < 20).to(dtype=torch.int32)) * ((torch.sum(final_vec ** 2, dim=[-1, -2]) < 3).to(dtype=torch.int32))
             trajs_group = (
                 nei * group_mask[..., None, None]).to(dtype=torch.float32)
             group_num = torch.sum(group_mask, dim=-1)
@@ -120,8 +126,9 @@ class GroupmsnModel(qpid.model.Model):
             # Obs trajectory encoding
             f_obs = self.te(obs)
             f_group = self.te(trajs_group)
-            f_group = (torch.sum(f_group, dim=1) + 1) / \
-                (group_num[..., None, None] + 1)
+            f_group = (
+                torch.sum(f_group * group_mask[..., None, None], dim=1) + 1e-8) / \
+                (group_num[..., None, None] + 1e-8)
 
             # Concat obs and nei feature
             f = torch.concat([f_obs, f_group], dim=-1)
@@ -135,9 +142,43 @@ class GroupmsnModel(qpid.model.Model):
         f_social = self.tse(conception_circle)
         f_social = torch.repeat_interleave(f_social, torch.tensor(
             f_obs.shape[-2]).to(f_obs.device).to(torch.int32), dim=-2)
-
+        # f_social = torch.zeros_like(f_social)
         # Concat feature of sc and traj
-        f = torch.concat([f_social, f], dim=-1)
+        _f = torch.concat([f_social, f], dim=-1)
+
+        f = self.concat_fc(_f)
+
+        # # -----------------------
+        # # The following lines are used to draw visualized figures in our paper
+        from scripts.draw_fov import draw_contributions
+
+        con = torch.sum(f_social).numpy()
+        obs_f = torch.sum(f_obs).numpy()
+        group_f = torch.sum(f_group).numpy()
+
+        w = self.concat_fc.linear.weight
+        d = self.gp_args.output_units
+
+        _con_f = _f[..., :d*2]
+        _obs_f = _f[..., d*2:d*3]
+        _group_f = _f[..., d*3:d*4]
+        w_con = w[..., :d*2]
+        w_obs = w[..., d*2:d*3]
+        w_group = w[..., d*3:d*4]
+
+        con_f=_con_f @ w_con.T
+        obs_f=_obs_f @ w_obs.T
+        group_f=_group_f @ w_group.T
+
+        draw_contributions(con_f=_con_f @ w_con.T,
+                           obs_f=_obs_f @ w_obs.T,
+                           group_f=_group_f @ w_group.T,
+                           file_name='contributions',
+                           color_high=[0xff, 0xa6, 0x00],
+                           color_low=[0x00, 0x3f, 0x5c],
+                           max_width=0.3, min_width=0.2)
+        # Vis codes end here
+        # -----------------------
 
         # Sampling random noise vectors
         all_predictions = []
@@ -179,6 +220,13 @@ class GroupmsnModel(qpid.model.Model):
 
         Y = torch.concat(all_predictions, dim=-3)
         return Y
+
+    def create_empty_neighbors(self, ego_traj: torch.Tensor):
+        empty = INIT_POSITION * torch.ones([ego_traj.shape[0],
+                                            self.args.max_agents - 1,
+                                            ego_traj.shape[-2],
+                                            ego_traj.shape[-1]]).to(ego_traj.device)
+        return torch.concat([ego_traj[..., None, :, :], empty], dim=-3)
 
 
 class GroupmsnStructure(qpid.training.Structure):
