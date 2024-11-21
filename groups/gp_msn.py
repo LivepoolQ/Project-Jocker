@@ -115,7 +115,7 @@ class GroupmsnModel(qpid.model.Model):
             # final step distance(fde)
             final_vec = c_nei[..., -1:, :] - c_obs[:, None, -1:, :]
             group_mask = ((torch.sum(long_term_dis ** 2,
-                                     dim=[-1, -2]) < 20).to(dtype=torch.int32)) * ((torch.sum(final_vec ** 2, dim=[-1, -2]) < 3).to(dtype=torch.int32))
+                                     dim=[-1, -2]) < 6).to(dtype=torch.int32)) * ((torch.sum(final_vec ** 2, dim=[-1, -2]) < 6/8).to(dtype=torch.int32))
             trajs_group = (
                 nei * group_mask[..., None, None]).to(dtype=torch.float32)
             group_num = torch.sum(group_mask, dim=-1)
@@ -150,33 +150,33 @@ class GroupmsnModel(qpid.model.Model):
 
         # # -----------------------
         # # The following lines are used to draw visualized figures in our paper
-        from scripts.draw_fov import draw_contributions
+        # from scripts.draw_fov import draw_contributions
 
-        con = torch.sum(f_social).numpy()
-        obs_f = torch.sum(f_obs).numpy()
-        group_f = torch.sum(f_group).numpy()
+        # con = torch.sum(f_social).numpy()
+        # obs_f = torch.sum(f_obs).numpy()
+        # group_f = torch.sum(f_group).numpy()
 
-        w = self.concat_fc.linear.weight
-        d = self.gp_args.output_units
+        # w = self.concat_fc.linear.weight
+        # d = self.gp_args.output_units
 
-        _con_f = _f[..., :d*2]
-        _obs_f = _f[..., d*2:d*3]
-        _group_f = _f[..., d*3:d*4]
-        w_con = w[..., :d*2]
-        w_obs = w[..., d*2:d*3]
-        w_group = w[..., d*3:d*4]
+        # _con_f = _f[..., :d*2]
+        # _obs_f = _f[..., d*2:d*3]
+        # _group_f = _f[..., d*3:d*4]
+        # w_con = w[..., :d*2]
+        # w_obs = w[..., d*2:d*3]
+        # w_group = w[..., d*3:d*4]
 
-        con_f=_con_f @ w_con.T
-        obs_f=_obs_f @ w_obs.T
-        group_f=_group_f @ w_group.T
+        # con_f=_con_f @ w_con.T
+        # obs_f=_obs_f @ w_obs.T
+        # group_f=_group_f @ w_group.T
 
-        draw_contributions(con_f=_con_f @ w_con.T,
-                           obs_f=_obs_f @ w_obs.T,
-                           group_f=_group_f @ w_group.T,
-                           file_name='contributions',
-                           color_high=[0xff, 0xa6, 0x00],
-                           color_low=[0x00, 0x3f, 0x5c],
-                           max_width=0.3, min_width=0.2)
+        # draw_contributions(con_f=_con_f @ w_con.T,
+        #                    obs_f=_obs_f @ w_obs.T,
+        #                    group_f=_group_f @ w_group.T,
+        #                    file_name='contributions',
+        #                    color_high=[0xff, 0xa6, 0x00],
+        #                    color_low=[0x00, 0x3f, 0x5c],
+        #                    max_width=0.3, min_width=0.2)
         # Vis codes end here
         # -----------------------
 
