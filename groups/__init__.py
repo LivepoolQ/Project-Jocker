@@ -2,24 +2,23 @@
 @Author: Ziqian Zou
 @Date: 2024-10-19 15:59:02
 @LastEditors: Ziqian Zou
-@LastEditTime: 2024-11-14 14:47:15
+@LastEditTime: 2024-11-22 16:22:21
 @Description: file content
 @Github: https://github.com/LivepoolQ
 @Copyright 2024 Ziqian Zou, All Rights Reserved.
 """
 import qpid
+from qpid.mods.vis import __vis
 from qpid.utils import get_relative_path
-from qpid.mods.vis import __vis 
 
 from .__args import GroupModelArgs
 from .gp import GroupModel, GroupStructure
-from .gp_msn import GroupmsnModel, GroupmsnStructure
 
 # Register new args and models
 qpid.register_args(GroupModelArgs, 'GroupModel Args')
 qpid.register(
     gp=[GroupStructure, GroupModel],
-    gp_msn=[GroupmsnStructure, GroupmsnModel]
+    gp_msn=[GroupStructure, GroupModel]
 )
 
 
