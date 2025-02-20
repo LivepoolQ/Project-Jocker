@@ -11,14 +11,17 @@ import qpid
 from qpid.mods.vis import __vis
 from qpid.utils import get_relative_path
 
-from .__args import GroupModelArgs
+from .__args import GroupModelArgs, GrouplusModelArgs
 from .gp import GroupModel, GroupStructure
+from .gplus import GrouplusModel, GrouplusStructure
 
 # Register new args and models
 qpid.register_args(GroupModelArgs, 'GroupModel Args')
+qpid.register_args(GrouplusModelArgs, 'GrouplusModel Args')
 qpid.register(
     gp=[GroupStructure, GroupModel],
-    gp_msn=[GroupStructure, GroupModel]
+    gp_msn=[GroupStructure, GroupModel],
+    gplus=[GrouplusStructure, GrouplusModel]
 )
 
 

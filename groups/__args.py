@@ -96,3 +96,13 @@ class GroupModelArgs(EmptyArgs):
     @property
     def no_social(self) -> int:
         return self._arg('no_social', 0, argtype=TEMPORARY)
+    
+    
+class GrouplusModelArgs(EmptyArgs):
+
+    @property
+    def use_empty_segmap(self) -> int:
+        """
+
+        """
+        return self._arg('use_empty_segmap', 0, argtype=STATIC)
